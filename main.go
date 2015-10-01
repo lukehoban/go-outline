@@ -13,10 +13,9 @@ import (
 type Declaration struct {
 	Label		string 			`json:"label"`
 	Type		string 			`json:"type"`
-	Icon		string 			`json:"icon,emitempty"`
 	Start		token.Pos    	`json:"start"`
 	End   		token.Pos    	`json:"end"`
-	Children 	[]Declaration	`json:"children"`
+	Children 	[]Declaration	`json:"children,omitempty"`
 }
 
 var (
@@ -38,48 +37,59 @@ func main() {
 		case *ast.FuncDecl: 
 			declarations = append(declarations, Declaration{
 				decl.Name.String(),
-				"",
 				"function",
 				decl.Pos(),
 				decl.End(),
 				[]Declaration{},
 			})
 		case *ast.GenDecl:
-			switch decl.Tok {
-			case token.IMPORT:
-				for _, spec := range(decl.Specs) {
-					importSpec := spec.(*ast.ImportSpec)
+			for _, spec := range(decl.Specs) {
+				switch spec := spec.(type) {
+				case *ast.ImportSpec:
 					declarations = append(declarations, Declaration{
-						importSpec.Path.Value,
-						"",
+						spec.Path.Value,
 						"import",
-						importSpec.Pos(),
-						importSpec.End(),
+						spec.Pos(),
+						spec.End(),
 						[]Declaration{},
 					})
+				case *ast.TypeSpec:
+					//TODO: Members if it's a struct or interface type?
+					declarations = append(declarations, Declaration{
+						spec.Name.String(),
+						"type",
+						spec.Pos(),
+						spec.End(),
+						[]Declaration{},
+					})
+				case *ast.ValueSpec:
+					for _, id := range spec.Names {
+						declarations = append(declarations, Declaration{
+							id.Name,
+							"variable",
+							id.Pos(),
+							id.End(),
+							[]Declaration{},
+						})
+					}
+				default:
+					reportError(fmt.Errorf("Unknown token type: %s", decl.Tok))
 				}
-			case token.TYPE:
-				fmt.Printf("TYPE: %s [%s]\n", decl.Specs)
-			case token.VAR:
-				fmt.Printf("VAR: %s [%s]\n",  decl.Specs)
-			case token.CONST:
-				fmt.Printf("CONST: %s [%s]\n", decl.Specs)
-			default:
-				reportError(fmt.Errorf("Unknown token type: %s", decl.Tok))
 			}
+		default:
+			reportError(fmt.Errorf("Unknown declaration @", decl.Pos()))
 		}
 	}
 	
-	pkg := &Declaration{
+	pkg := []*Declaration{&Declaration{
 		fileAst.Name.String(),
-		"",
 		"package",
 		fileAst.Pos(),
 		fileAst.End(),
 		declarations,
-	}
+	}}
 	
-	str, _ := json.MarshalIndent(pkg,"", " ")
+	str, _ := json.Marshal(pkg)
 	fmt.Println(string(str))
 	
 }
