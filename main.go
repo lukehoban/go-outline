@@ -1,21 +1,21 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"go/ast"
-	"go/token"
-	"go/parser"
-	"flag"
 	"encoding/json"
+	"flag"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
 )
 
 type Declaration struct {
-	Label		string 			`json:"label"`
-	Type		string 			`json:"type"`
-	Start		token.Pos    	`json:"start"`
-	End   		token.Pos    	`json:"end"`
-	Children 	[]Declaration	`json:"children,omitempty"`
+	Label    string        `json:"label"`
+	Type     string        `json:"type"`
+	Start    token.Pos     `json:"start"`
+	End      token.Pos     `json:"end"`
+	Children []Declaration `json:"children,omitempty"`
 }
 
 var (
@@ -29,12 +29,12 @@ func main() {
 	if err != nil {
 		reportError(fmt.Errorf("Could not parse file %s", *file))
 	}
-	
+
 	declarations := []Declaration{}
-	
+
 	for _, decl := range fileAst.Decls {
 		switch decl := decl.(type) {
-		case *ast.FuncDecl: 
+		case *ast.FuncDecl:
 			declarations = append(declarations, Declaration{
 				decl.Name.String(),
 				"function",
@@ -43,7 +43,7 @@ func main() {
 				[]Declaration{},
 			})
 		case *ast.GenDecl:
-			for _, spec := range(decl.Specs) {
+			for _, spec := range decl.Specs {
 				switch spec := spec.(type) {
 				case *ast.ImportSpec:
 					declarations = append(declarations, Declaration{
@@ -80,7 +80,7 @@ func main() {
 			reportError(fmt.Errorf("Unknown declaration @", decl.Pos()))
 		}
 	}
-	
+
 	pkg := []*Declaration{&Declaration{
 		fileAst.Name.String(),
 		"package",
@@ -88,10 +88,10 @@ func main() {
 		fileAst.End(),
 		declarations,
 	}}
-	
+
 	str, _ := json.Marshal(pkg)
 	fmt.Println(string(str))
-	
+
 }
 
 func reportError(err error) {
