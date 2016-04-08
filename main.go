@@ -1,21 +1,24 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
 	"os"
 )
 
 type Declaration struct {
-	Label    string        `json:"label"`
-	Type     string        `json:"type"`
-	Start    token.Pos     `json:"start"`
-	End      token.Pos     `json:"end"`
-	Children []Declaration `json:"children,omitempty"`
+	Label        string        `json:"label"`
+	Type         string        `json:"type"`
+	ReceiverType string        `json:"receiverType,omitempty"`
+	Start        token.Pos     `json:"start"`
+	End          token.Pos     `json:"end"`
+	Children     []Declaration `json:"children,omitempty"`
 }
 
 var (
@@ -35,9 +38,14 @@ func main() {
 	for _, decl := range fileAst.Decls {
 		switch decl := decl.(type) {
 		case *ast.FuncDecl:
+			receiverType, err := getReceiverType(fset, decl)
+			if err != nil {
+				reportError(fmt.Errorf("Failed to parse receiver type: %v", err))
+			}
 			declarations = append(declarations, Declaration{
 				decl.Name.String(),
 				"function",
+				receiverType,
 				decl.Pos(),
 				decl.End(),
 				[]Declaration{},
@@ -49,6 +57,7 @@ func main() {
 					declarations = append(declarations, Declaration{
 						spec.Path.Value,
 						"import",
+						"",
 						spec.Pos(),
 						spec.End(),
 						[]Declaration{},
@@ -58,6 +67,7 @@ func main() {
 					declarations = append(declarations, Declaration{
 						spec.Name.String(),
 						"type",
+						"",
 						spec.Pos(),
 						spec.End(),
 						[]Declaration{},
@@ -67,6 +77,7 @@ func main() {
 						declarations = append(declarations, Declaration{
 							id.Name,
 							"variable",
+							"",
 							id.Pos(),
 							id.End(),
 							[]Declaration{},
@@ -84,6 +95,7 @@ func main() {
 	pkg := []*Declaration{&Declaration{
 		fileAst.Name.String(),
 		"package",
+		"",
 		fileAst.Pos(),
 		fileAst.End(),
 		declarations,
@@ -92,6 +104,19 @@ func main() {
 	str, _ := json.Marshal(pkg)
 	fmt.Println(string(str))
 
+}
+
+func getReceiverType(fset *token.FileSet, decl *ast.FuncDecl) (string, error) {
+	if decl.Recv == nil {
+		return "", nil
+	}
+
+	buf := &bytes.Buffer{}
+	if err := format.Node(buf, fset, decl.Recv.List[0].Type); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
 func reportError(err error) {
