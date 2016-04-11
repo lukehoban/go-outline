@@ -18,10 +18,11 @@ go get -u github.com/lukehoban/go-outline
 ### Schema
 ```go
 type Declaration struct {
-	Label       string          `json:"label"`
-	Type        string          `json:"type"`
-	Start       token.Pos       `json:"start"`
-	End         token.Pos       `json:"end"`
-	Children    []Declaration   `json:"children,omitempty"`
+	Label        string        `json:"label"`
+	Type         string        `json:"type"`
+	ReceiverType string        `json:"receiverType,omitempty"`
+	Start        token.Pos     `json:"start"`
+	End          token.Pos     `json:"end"`
+	Children     []Declaration `json:"children,omitempty"`
 }
 ```
