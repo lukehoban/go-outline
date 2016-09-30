@@ -15,6 +15,11 @@ go get -u github.com/lukehoban/go-outline
 [{"label":"proc","type":"package",<...>}]
 ```
 
+To parse and return only imports
+```bash
+> go-outline -f file.go -imports-only
+```
+
 ### Schema
 ```go
 type Declaration struct {

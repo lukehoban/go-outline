@@ -22,13 +22,19 @@ type Declaration struct {
 }
 
 var (
-	file = flag.String("f", "", "the path to the file to outline")
+	file        = flag.String("f", "", "the path to the file to outline")
+	importsOnly = flag.Bool("imports-only", false, "parse imports only")
 )
 
 func main() {
 	flag.Parse()
 	fset := token.NewFileSet()
-	fileAst, err := parser.ParseFile(fset, *file, nil, parser.ParseComments)
+	parserMode := parser.ParseComments
+	if *importsOnly == true {
+		parserMode = parser.ImportsOnly
+	}
+
+	fileAst, err := parser.ParseFile(fset, *file, nil, parserMode)
 	if err != nil {
 		reportError(fmt.Errorf("Could not parse file %s", *file))
 	}
