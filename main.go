@@ -24,6 +24,7 @@ type Declaration struct {
 var (
 	file        = flag.String("f", "", "the path to the file to outline")
 	importsOnly = flag.Bool("imports-only", false, "parse imports only")
+	src         = flag.String("src", "", "source code of the file to outline")
 )
 
 func main() {
@@ -34,7 +35,15 @@ func main() {
 		parserMode = parser.ImportsOnly
 	}
 
-	fileAst, err := parser.ParseFile(fset, *file, nil, parserMode)
+	var fileAst *ast.File
+	var err error
+
+	if len(*src) > 0 {
+		fileAst, err = parser.ParseFile(fset, *file, *src, parserMode)
+	} else {
+		fileAst, err = parser.ParseFile(fset, *file, nil, parserMode)
+	}
+
 	if err != nil {
 		reportError(fmt.Errorf("Could not parse file %s", *file))
 	}
