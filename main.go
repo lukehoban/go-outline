@@ -46,6 +46,7 @@ func main() {
 
 	if err != nil {
 		reportError(fmt.Errorf("Could not parse file %s", *file))
+		os.Exit(1)
 	}
 
 	declarations := []Declaration{}
