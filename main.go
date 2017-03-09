@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"go/ast"
 	"go/format"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 )
 
@@ -28,6 +28,8 @@ var (
 )
 
 func main() {
+	log.SetPrefix("go-outline: ")
+	log.SetFlags(0)
 	flag.Parse()
 	fset := token.NewFileSet()
 	parserMode := parser.ParseComments
@@ -40,12 +42,18 @@ func main() {
 
 	if len(*src) > 0 {
 		fileAst, err = parser.ParseFile(fset, *file, *src, parserMode)
-	} else {
+		if err != nil {
+			log.Fatalf("could not parse source: %v", err)
+		}
+	} else if len(*file) > 0 {
 		fileAst, err = parser.ParseFile(fset, *file, nil, parserMode)
-	}
-
-	if err != nil {
-		reportError(fmt.Errorf("Could not parse file %s", *file))
+		if err != nil {
+			log.Fatalf("could not parse file with name %q: %v", *file, err)
+		}
+	} else {
+		log.Print("invalid usage: no source or file provided")
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
 
 	declarations := []Declaration{}
@@ -55,7 +63,8 @@ func main() {
 		case *ast.FuncDecl:
 			receiverType, err := getReceiverType(fset, decl)
 			if err != nil {
-				reportError(fmt.Errorf("Failed to parse receiver type: %v", err))
+				log.Printf("failed to parse receiver type: %v", err)
+				continue
 			}
 			declarations = append(declarations, Declaration{
 				decl.Name.String(),
@@ -99,11 +108,11 @@ func main() {
 						})
 					}
 				default:
-					reportError(fmt.Errorf("Unknown token type: %s", decl.Tok))
+					log.Printf("unknown token type: %s", decl.Tok)
 				}
 			}
 		default:
-			reportError(fmt.Errorf("Unknown declaration @", decl.Pos()))
+			log.Printf("unknown declaration @%v", decl.Pos())
 		}
 	}
 
@@ -116,8 +125,7 @@ func main() {
 		declarations,
 	}}
 
-	str, _ := json.Marshal(pkg)
-	fmt.Println(string(str))
+	_ = json.NewEncoder(os.Stdout).Encode(pkg)
 
 }
 
@@ -132,8 +140,4 @@ func getReceiverType(fset *token.FileSet, decl *ast.FuncDecl) (string, error) {
 	}
 
 	return buf.String(), nil
-}
-
-func reportError(err error) {
-	fmt.Fprintln(os.Stderr, "error:", err)
 }
