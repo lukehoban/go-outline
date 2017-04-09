@@ -10,6 +10,8 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+
+	"golang.org/x/tools/go/buildutil"
 )
 
 type Declaration struct {
@@ -24,7 +26,7 @@ type Declaration struct {
 var (
 	file        = flag.String("f", "", "the path to the file to outline")
 	importsOnly = flag.Bool("imports-only", false, "parse imports only")
-	src         = flag.String("src", "", "source code of the file to outline")
+	modified    = flag.Bool("modified", false, "read an archive of the modified file from standard input")
 )
 
 func main() {
@@ -38,8 +40,16 @@ func main() {
 	var fileAst *ast.File
 	var err error
 
-	if len(*src) > 0 {
-		fileAst, err = parser.ParseFile(fset, *file, *src, parserMode)
+	if *modified == true {
+		archive, err := buildutil.ParseOverlayArchive(os.Stdin)
+		if err != nil {
+			reportError(fmt.Errorf("failed to parse -modified archive: %v", err))
+		}
+		fc, ok := archive[*file]
+		if !ok {
+			reportError(fmt.Errorf("couldn't find %s in archive", *file))
+		}
+		fileAst, err = parser.ParseFile(fset, *file, fc, parserMode)
 	} else {
 		fileAst, err = parser.ParseFile(fset, *file, nil, parserMode)
 	}
