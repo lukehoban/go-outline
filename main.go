@@ -99,9 +99,13 @@ func main() {
 					})
 				case *ast.ValueSpec:
 					for _, id := range spec.Names {
+						varOrConst := "variable"
+						if decl.Tok == token.CONST {
+							varOrConst = "constant"
+						}
 						declarations = append(declarations, Declaration{
 							id.Name,
-							"variable",
+							varOrConst,
 							"",
 							id.Pos(),
 							id.End(),
